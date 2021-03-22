@@ -1,4 +1,5 @@
-﻿using System;
+﻿using FileManager.UI;
+using System;
 using System.IO;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
@@ -9,11 +10,11 @@ namespace FileManager
     class Program
     {
         static string currentDirectory;
-        static int rowsToDisplay = 10;
-        static List<Entry> currentEntriesList;
-        static int recursionLevel = 5;
-        static List<string> commandJournal;
-
+        static int rowsToDisplay = 18;
+        static int recursionLevel = 2;
+        static Square treeArea;
+        static Square infoArea;
+        static Square consoleArea;
         static bool IsArgsCountEnough(string[] command, int count)
         {
             if ((command.Length - 1) >= count)
@@ -22,14 +23,14 @@ namespace FileManager
             }
             else
             {
-                Console.WriteLine($"Comand {command[0]} needs {count} arguments!");
+                infoArea.DisplayLine($"Comand {command[0]} needs {count} arguments!");
                 return false;
             }
         }
         static bool AskUser(string question)
         {
-            Console.Write($"{question} (введите: y / n)");
-            if (Console.ReadLine() == "y")
+            infoArea.DisplayLine($"{question} (введите: y / n)");
+            if (consoleArea.Input("Введите ответ: ") == "y")
             {
                 return true;
             }
@@ -44,12 +45,11 @@ namespace FileManager
         /// <param name="stringCommand">An input string which is need to parse.</param>
         static Commands ParseCommand(string stringCommand)
         {
-            commandJournal.Add(stringCommand);
             Commands userCommand;
             if (stringCommand == "")
             {
                 userCommand = Commands.Unknown;
-                Console.WriteLine("команда то пустая");
+                infoArea.DisplayLine("команда то пустая");
             }
             else
             {
@@ -97,7 +97,7 @@ namespace FileManager
                         break;
                     default:
                         userCommand = Commands.Unknown;
-                        Console.WriteLine("Неизвестная команда");
+                        infoArea.DisplayLine("Неизвестная команда");
                         break;
                 }
             }
@@ -141,16 +141,15 @@ namespace FileManager
         static void ChangeCurrentDirectory(string newDirectory)
         {
             newDirectory = MakeAbsolutePath(newDirectory);
-            Console.WriteLine($"target is {newDirectory}");
+            //Console.WriteLine();
             if (Directory.Exists(newDirectory))
             {
                 currentDirectory = newDirectory;
-                Console.WriteLine($"Текущая директория применена: {newDirectory}");
-                //ConfigurationManager.AppSettings.Set("lastDir", currentDirectory);
+                infoArea.DisplayLine($"Текущая директория применена: {newDirectory}");
             }
             else
             {
-                Console.WriteLine("Нет такой директории");
+                infoArea.DisplayLine("Нет такой директории");
             }
         }
         static bool IsStringDir(string str)
@@ -201,8 +200,6 @@ namespace FileManager
         {
             source = MakeAbsolutePath(source);
             target = MakeAbsolutePath(target);
-            Console.WriteLine($"source: {source}");
-            Console.WriteLine($"target: {target}");
             //Если source файл
             if (File.Exists(source))
             {
@@ -220,11 +217,11 @@ namespace FileManager
                             if (AskUser($"Файл {target} уже существует. Заменить?"))
                             {
                                 File.Copy(source, target, true);
-                                Console.WriteLine("Файл скопирован с заменой.");
+                                infoArea.DisplayLine("Файл скопирован с заменой.");
                             }
                             else
                             {
-                                Console.WriteLine("Файл не скопирован.");
+                                infoArea.DisplayLine("Файл не скопирован.");
                             }
                         }
                         else
@@ -237,13 +234,13 @@ namespace FileManager
                         File.Copy(source, target);
                         if (userInteraction)
                         {
-                            Console.WriteLine("Файл скопирован.");
+                            infoArea.DisplayLine("Файл скопирован.");
                         }
                     }
                 }
                 else
                 {
-                    Console.WriteLine("Несуществует пути target");
+                    infoArea.DisplayLine("Несуществует пути target");
                 }
             }
             //Если source папка
@@ -265,31 +262,43 @@ namespace FileManager
                             {
                                 Delete(target, false);
                                 CopyFolder(source, target);
+                                if (userInteraction)
+                                {
+                                    infoArea.DisplayLine("Папка скопирована с заменой");
+                                }
                             }
                             else
                             {
-                                Console.WriteLine("Папка не скопирована!");
+                                infoArea.DisplayLine("Папка не скопирована!");
                             }
                         }
                         else
                         {
                             CopyFolder(source, target);
+                            if (userInteraction)
+                            {
+                                infoArea.DisplayLine("Папка скопирована");
+                            }
                         }
                     }
                     else
                     {
                         CopyFolder(source, target);
+                        if (userInteraction)
+                        {
+                            infoArea.DisplayLine("Папка скопирована");
+                        }
                     } 
                 }
                 // это если указали неверный путь куда надо скопироваь
                 else
                 {
-                    Console.WriteLine($"Директории {target} не существует");
+                    infoArea.DisplayLine($"Директории {target} не существует");
                 }
             }
             else
             {
-                Console.WriteLine("Неверно задан параметр source");
+                infoArea.DisplayLine("Неверно задан параметр source");
             }
         }
         static void CopyFolder(string source, string target)
@@ -308,8 +317,6 @@ namespace FileManager
         {
             source = MakeAbsolutePath(source);
             target = MakeAbsolutePath(target);
-            Console.WriteLine($"source: {source}");
-            Console.WriteLine($"target: {target}");
             // Если source файл
             if (File.Exists(source))
             {
@@ -318,7 +325,7 @@ namespace FileManager
                     target = Path.Combine(target, Path.GetFileName(source));
                     if (source == target)
                     {
-                        Console.WriteLine("Source и Target совпадают. Действие невыполнено");
+                        infoArea.DisplayLine("Source и Target совпадают. Действие невыполнено");
                     }
                     else
                     {
@@ -329,11 +336,11 @@ namespace FileManager
                                 if (AskUser($"Файл {target} уже существует. Заменить?"))
                                 {
                                     File.Move(source, target, true);
-                                    Console.WriteLine("Файл перемещен с заменой.");
+                                    infoArea.DisplayLine("Файл перемещен с заменой.");
                                 }
                                 else
                                 {
-                                    Console.WriteLine("Файл не перемещен.");
+                                    infoArea.DisplayLine("Файл не перемещен.");
                                 }
                             }
                             else
@@ -346,14 +353,14 @@ namespace FileManager
                             File.Move(source, target);
                             if (userInteraction)
                             {
-                                Console.WriteLine("Файл перемещен.");
+                                infoArea.DisplayLine("Файл перемещен.");
                             }
                         }
                     }
                 }
                 else
                 {
-                    Console.WriteLine("Не существует пути target");
+                    infoArea.DisplayLine("Не существует пути target");
                 }
             }
             // Если source папка
@@ -364,7 +371,7 @@ namespace FileManager
                     target = Path.Combine(target, Path.GetFileName(source));
                     if (source == target)
                     {
-                        Console.WriteLine("Source и Target совпадают. Действие невыполнено");
+                        infoArea.DisplayLine("Source и Target совпадают. Действие невыполнено");
                     }
                     else
                     {
@@ -379,7 +386,7 @@ namespace FileManager
                                 }
                                 else
                                 {
-                                    Console.WriteLine("Папка не перемещена!");
+                                    infoArea.DisplayLine("Папка не перемещена!");
                                 }
                             }
                             else
@@ -396,13 +403,13 @@ namespace FileManager
                 // это если указали неверный путь куда надо скопироваь
                 else
                 {
-                    Console.WriteLine($"Директории {target} не существует");
+                    infoArea.DisplayLine($"Директории {target} не существует");
                 }
             }
             // Если source некорректный
             else
             {
-                Console.WriteLine("Неверно задан параметр source");
+                infoArea.DisplayLine("Неверно задан параметр source");
             }
         }
         static void MoveFolder(string source, string target)
@@ -421,7 +428,6 @@ namespace FileManager
         static void Delete(string path, bool userInteraction)
         {
             path = MakeAbsolutePath(path);
-            Console.WriteLine($"target is {path}");
             // Если это файл
             if (File.Exists(path))
             {
@@ -435,6 +441,10 @@ namespace FileManager
                 else
                 {
                     File.Delete(path);
+                    if (userInteraction)
+                    {
+                        infoArea.DisplayLine("Файл удален");
+                    }
                 }
             }
             // Если это папка
@@ -445,16 +455,24 @@ namespace FileManager
                     if (AskUser("Вы уверены, что хотите удалить папку?"))
                     {
                         DeleteFolder(path);
+                        if (userInteraction)
+                        {
+                            infoArea.DisplayLine("Папка удалена");
+                        }
                     }
                 }
                 else
                 {
                     DeleteFolder(path);
+                    if (userInteraction)
+                    {
+                        infoArea.DisplayLine("Папка удалена");
+                    }
                 }
             }
             else
             {
-                Console.WriteLine("Bad target");
+                infoArea.DisplayLine("Bad target");
             }
         }
         static void DeleteFolder(string path)
@@ -472,18 +490,33 @@ namespace FileManager
             //rowsToDisplay = Convert.ToInt32(ConfigurationManager.AppSettings.Get("rowsDisplay"));
             //recursionLevel = Convert.ToInt32(ConfigurationManager.AppSettings.Get("recursionLevel"));
 
+            // UI
+            treeArea = new Square(0, 0, 120, rowsToDisplay + 2);
+            treeArea.bottomLeftCornerSymbol = '╠';
+            treeArea.bottomRightCornerSymbol = '╣';
+            treeArea.MakeAllBorders();
+            treeArea.Draw();
+            infoArea = new Square(0, treeArea.posBorderBottom, 120, 7);
+            infoArea.topLeftCornerSymbol = '╠';
+            infoArea.topRightCornerSymbol = '╣';
+            infoArea.bottomLeftCornerSymbol = '╠';
+            infoArea.bottomRightCornerSymbol = '╣';
+            infoArea.MakeAllBorders();
+            infoArea.Draw();
+            consoleArea = new Square(0, infoArea.posBorderBottom, 120, 3);
+            consoleArea.topLeftCornerSymbol = '╠';
+            consoleArea.topRightCornerSymbol = '╣';
+            consoleArea.MakeAllBorders();
+            consoleArea.Draw();
+            Console.WriteLine();
 
             ChangeCurrentDirectory("D:\\TEMP");
             Commands userCommand;
-            commandJournal = new List<string>();
             do
             {
-                ShowDirectory(GetEntriesList(currentDirectory), recursionLevel);
-                Console.WriteLine("==============================");
-                Console.Write($"{currentDirectory}>");
-                userCommand = ParseCommand(Console.ReadLine());
+                //ShowDirectory(GetEntriesList(currentDirectory), recursionLevel);
+                userCommand = ParseCommand(consoleArea.Input($"{currentDirectory}>"));
             } while (userCommand != Commands.Exit);
-
         }
     }
 }

@@ -6,4 +6,9 @@
     <Authors>NickyParsons</Authors>
   </PropertyGroup>
 
+  <ItemGroup>
+    <None Remove=".gitignore" />
+    <None Remove="README.md" />
+  </ItemGroup>
+
 </Project>
