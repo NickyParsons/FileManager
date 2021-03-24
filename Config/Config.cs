@@ -37,7 +37,7 @@ namespace FileManager.Config
             XmlElement root = xml.CreateElement("Setting");
             root.SetAttribute("rowsToDisplay", "18");
             root.SetAttribute("recursionLevel", "2");
-            root.SetAttribute("lastDir", "D:\\");
+            root.SetAttribute("lastDir", "С:\\");
             xml.AppendChild(root);
             xml.Save(ConfigFilePath);
         }

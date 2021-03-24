@@ -19,6 +19,12 @@ namespace FileManager
         static List<string> displayList = new List<string>();
         static List<string>[] displayPages;
         static int currentDisplayPage = 0;
+        /// <summary>
+        /// Проверяет достаточно ли аргументов в переданной строке.
+        /// </summary>
+        /// <param name="command">Массив строк, содержажий команду первым элементой.</param>
+        /// <param name="count">Количество необходимых аргументов для команды.</param>
+        /// <returns>true если аргументов достаточно, false если не достаточно.</returns>
         static bool IsArgsCountEnough(string[] command, int count)
         {
             if ((command.Length - 1) >= count)
@@ -31,6 +37,11 @@ namespace FileManager
                 return false;
             }
         }
+        /// <summary>
+        /// Выводит в панель информации вопрос, затем анализирует ответ пользователя, введенный в консоль.
+        /// </summary>
+        /// <param name="question">Вопрос, который нужно вывести в инфопанель.</param>
+        /// <returns>true если ответ пользователя y, в остальных случаях false.</returns>
         static bool AskUser(string question)
         {
             infoArea.DisplayLine($"{question} (введите: y / n)");
@@ -44,9 +55,10 @@ namespace FileManager
             }
         }
         /// <summary>
-        /// Method for parse a comand from user.
+        /// Разбирает строковую команду по эелементо с разделителем "пробел", и выполняет необходимый метод, соответствующей команде.
         /// </summary>
         /// <param name="stringCommand">An input string which is need to parse.</param>
+        /// <returns>true если была введена команда exit, в остальных случаях false.</returns>
         static bool ParseCommand(string stringCommand)
         {
             bool isCommandExit = false;
@@ -116,9 +128,10 @@ namespace FileManager
             return isCommandExit;
         }
         /// <summary>
-        /// This method check she new directory string and change current directory.
+        /// Метод для получения списка элементов в директории.
         /// </summary>
-        /// <param name="newDirectory">String of new directory.</param>
+        /// <param name="dir">Пусть к папке.</param>
+        /// <returns>Возвращает список элементов.</returns>
         static List<Entry> GetEntriesList(string dir)
         {
             List<Entry> entriesList = new List<Entry>();
@@ -138,26 +151,11 @@ namespace FileManager
             
             return entriesList;
         }
-        static void ShowDirectory(List<Entry> entireList, int recursionCount)
-        {
-            int spaceCount = recursionLevel - recursionCount;
-            foreach (Entry entry in entireList)
-            {
-                Console.Write(new string(' ', spaceCount * 3));
-                if (entry.Type == EntriesType.Directory)
-                {
-                    Console.WriteLine($"[ {entry.Name} ]");
-                }
-                else
-                {
-                    Console.WriteLine($"{entry.Name}");
-                }
-                if (entry.Type == EntriesType.Directory && recursionCount > 1)
-                {
-                    ShowDirectory(GetEntriesList(entry.Path), recursionCount - 1);
-                }
-            }
-        }
+        /// <summary>
+        /// Рекурсивно создаёт список строк необходимых вывести на косоль.
+        /// </summary>
+        /// <param name="entireList">Список элементов какой либо директории.</param>
+        /// <param name="recursionCount">Необходимая глубина отображения исходной папки.</param>
         static void MakeDisplayList(List<Entry> entireList, int recursionCount)
         {
             string displayString;
@@ -187,6 +185,9 @@ namespace FileManager
                 }
             }
         }
+        /// <summary>
+        /// Создаёт список строк необходимых вывести на косоль постранично с учетом указанного количества отображаемых на странице элементов.
+        /// </summary>
         static void MakePages()
         {
             int currentItem = 1;
@@ -212,6 +213,9 @@ namespace FileManager
             }
             currentDisplayPage = 0;
         }
+        /// <summary>
+        /// Текущая выбранная страница увеличивается на 1.
+        /// </summary>
         static void NextPage()
         {
             if (currentDisplayPage < displayPages.Length - 1)
@@ -219,6 +223,9 @@ namespace FileManager
                 currentDisplayPage++;
             }
         }
+        /// <summary>
+        /// Текущая выбранная страница уменьшается на 1.
+        /// </summary>
         static void PrevPage()
         {
             if (currentDisplayPage > 0)
@@ -226,6 +233,11 @@ namespace FileManager
                 currentDisplayPage--;
             }
         }
+        /// <summary>
+        /// Меняет текущую выбранную директорию и сохраняет в конфиг.
+        /// </summary>
+        /// <param name="newDirectory">Путь к новой директории.</param>
+        /// <param name="userInteraction">Нужно ли выводить в инфопанель сообщения.</param>
         static void ChangeCurrentDirectory(string newDirectory, bool userInteraction)
         {
             newDirectory = MakeAbsolutePath(newDirectory);
@@ -250,6 +262,11 @@ namespace FileManager
                 }
             }
         }
+        /// <summary>
+        /// Проверяет является ли строка абсолютным путём.
+        /// </summary>
+        /// <param name="str">Строка, которую необходимо проверить.</param>
+        /// <returns>true если строка это абсолютный путь, false в остальных случаях</returns>
         static bool IsStringDir(string str)
         {
             Regex regex = new Regex(@"^(\w):\\.*");
@@ -259,6 +276,11 @@ namespace FileManager
             }
             return false;
         }
+        /// <summary>
+        /// Убирает разделитель директории в начале абсолютного пути, если он есть
+        /// </summary>
+        /// <param name="path">Строка.</param>
+        /// <returns>Отредактированная строка.</returns>
         static string TrimStartingDirectorySeparator(string path)
         {
             Regex regex = new Regex(@"^\\.*");
@@ -268,6 +290,11 @@ namespace FileManager
             }
             return path;
         }
+        /// <summary>
+        /// Возвращает путь уровнем выше, если в конце был указан ".."
+        /// </summary>
+        /// <param name="path">Строка.</param>
+        /// <returns>Отредактированная строка.</returns>
         static string GetBackDirectory(string path)
         {
             Regex regex = new Regex(@"\\\.{2}$");
@@ -278,6 +305,11 @@ namespace FileManager
             }
             return path;
         }
+        /// <summary>
+        /// Недоделанный метод)
+        /// </summary>
+        /// <param name="path"></param>
+        /// <returns></returns>
         static string TrimBackDirectory(string path)
         {
             Regex regex = new Regex(@"\\\.{2}$");
@@ -288,6 +320,11 @@ namespace FileManager
             }
             return path;
         }
+        /// <summary>
+        /// Редактирует путь относительный или абсолютный, приводя к одинаковому виду.
+        /// </summary>
+        /// <param name="path">Путь.</param>
+        /// <returns>Отредактированный путь.</returns>
         static string MakeAbsolutePath(string path)
         {
             if (!IsStringDir(path))
@@ -301,10 +338,10 @@ namespace FileManager
             return path;
         }
         /// <summary>
-        /// Method for copy source to target.
+        /// Возвращает имя объекта с приставкой "_copy"
         /// </summary>
-        /// <param name="source">Can be a name of file in CD, path relative to CD or full path.</param>
-        /// <param name="target">Can be path relative to CD or full path</param>
+        /// <param name="path">Строка.</param>
+        /// <returns>Отредактированная строка.</returns>
         static string MakeCopyName(string path)
         {
             //Regex regex = new Regex(@"_copy\((\d)+\)$");
@@ -317,6 +354,12 @@ namespace FileManager
             //}
             return Path.Combine(dir, name + "_copy" + ext);
         }
+        /// <summary>
+        /// Method for copy source to target.
+        /// </summary>
+        /// <param name="source">Can be a name of file in CD, path relative to CD or full path.</param>
+        /// <param name="target">Can be path relative to CD or full path</param>
+        /// <param name="userInteraction">Нужно ли выводить в инфопанель сообщения.</param>
         static void Copy(string source, string target, bool userInteraction)
         {
             source = MakeAbsolutePath(source);
@@ -422,6 +465,11 @@ namespace FileManager
                 infoArea.DisplayLine("Неверно задан параметр source");
             }
         }
+        /// <summary>
+        /// Вспомогательный метод для копирования папок.
+        /// </summary>
+        /// <param name="source"></param>
+        /// <param name="target"></param>
         static void CopyFolder(string source, string target)
         {
             if (!Directory.Exists(target))
@@ -434,6 +482,12 @@ namespace FileManager
                 Copy(entry, target, false);
             }
         }
+        /// <summary>
+        /// Метод для перемещения объекта.
+        /// </summary>
+        /// <param name="source">Can be a name of file in CD, path relative to CD or full path.</param>
+        /// <param name="target">Can be path relative to CD or full path</param>
+        /// <param name="userInteraction">Нужно ли выводить в инфопанель сообщения.</param>
         static void Move(string source, string target, bool userInteraction)
         {
             source = MakeAbsolutePath(source);
@@ -544,6 +598,11 @@ namespace FileManager
                 infoArea.DisplayLine("Неверно задан параметр source");
             }
         }
+        /// <summary>
+        /// Вспомогательный метод для перемещения папок.
+        /// </summary>
+        /// <param name="source"></param>
+        /// <param name="target"></param>
         static void MoveFolder(string source, string target)
         {
             if (!Directory.Exists(target))
@@ -557,6 +616,11 @@ namespace FileManager
             }
             Directory.Delete(source);
         }
+        /// <summary>
+        /// Метод для удаления объекта
+        /// </summary>
+        /// <param name="path">Can be a name of file in CD, path relative to CD or full path.</param>
+        /// <param name="userInteraction">Нужно ли выводить в инфопанель сообщения.</param>
         static void Delete(string path, bool userInteraction)
         {
             path = MakeAbsolutePath(path);
@@ -615,6 +679,10 @@ namespace FileManager
                 infoArea.DisplayLine("Неверно задано имя объекта для удаления!");
             }
         }
+        /// <summary>
+        /// Вспомогательный метод для удаления папок.
+        /// </summary>
+        /// <param name="path"></param>
         static void DeleteFolder(string path)
         {
             string[] entries = Directory.GetFileSystemEntries(path);
@@ -624,6 +692,10 @@ namespace FileManager
             }
             Directory.Delete(path);
         }
+        /// <summary>
+        /// Метод для отображения атрибутов объекта.
+        /// </summary>
+        /// <param name="path">Путь к объекту.</param>
         static void ShowInfo(string path)
         {
             path = MakeAbsolutePath(path);
@@ -652,6 +724,9 @@ namespace FileManager
                 infoArea.DisplayLine("Указанный объект не существует!");
             }
         }
+        /// <summary>
+        /// Отобразить список команд.
+        /// </summary>
         static void ShowHelp()
         {
             infoArea.Clear();
@@ -663,6 +738,10 @@ namespace FileManager
                 "< | > - для выбора страниц отображения;",
                 "exit - завершение работы.");
         }
+        /// <summary>
+        /// Записать исключение в лог.
+        /// </summary>
+        /// <param name="exception">Исключение.</param>
         static void LogException(Exception exception)
         {
             string path = Path.Combine(Directory.GetCurrentDirectory(), "error.txt");
