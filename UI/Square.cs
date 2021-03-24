@@ -87,17 +87,20 @@ namespace FileManager.UI
             Console.Write(text);
             currentRow++;
         }
-        public void DisplayLine(string text)
-        {
-            this.Clear();
-            PrintLine(text);
-        }
-        public void DisplayAll(string[] text)
+        public void DisplayLine(params string[] text)
         {
             this.Clear();
             foreach (string line in text)
             {
                 PrintLine(line);
+            }
+        }
+        public void DisplayList(List<string> textList)
+        {
+            this.Clear();
+            foreach (string text in textList)
+            {
+                PrintLine(text);
             }
         }
         public void Clear()

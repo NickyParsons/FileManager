@@ -10,11 +10,15 @@ namespace FileManager
     class Program
     {
         static string currentDirectory;
-        static int rowsToDisplay = 18;
-        static int recursionLevel = 2;
+        static int rowsToDisplay;
+        static int recursionLevel;
+        static string defaultDir = "C:\\";
         static Square treeArea;
         static Square infoArea;
         static Square consoleArea;
+        static List<string> displayList = new List<string>();
+        static List<string>[] displayPages;
+        static int currentDisplayPage = 0;
         static bool IsArgsCountEnough(string[] command, int count)
         {
             if ((command.Length - 1) >= count)
@@ -43,13 +47,12 @@ namespace FileManager
         /// Method for parse a comand from user.
         /// </summary>
         /// <param name="stringCommand">An input string which is need to parse.</param>
-        static Commands ParseCommand(string stringCommand)
+        static bool ParseCommand(string stringCommand)
         {
-            Commands userCommand;
+            bool isCommandExit = false;
             if (stringCommand == "")
             {
-                userCommand = Commands.Unknown;
-                infoArea.DisplayLine("команда то пустая");
+                infoArea.DisplayLine("Вы не ввели команду!");
             }
             else
             {
@@ -57,15 +60,13 @@ namespace FileManager
                 switch (command[0])
                 {
                     case "cd":
-                        userCommand = Commands.CurrentDirectory;
                         if(IsArgsCountEnough(command, 1))
                         {
-                            ChangeCurrentDirectory(command[1]);
+                            ChangeCurrentDirectory(command[1], true);
                         }
                         break;
                     case "cp":
                     case "copy":
-                        userCommand = Commands.Copy;
                         if (IsArgsCountEnough(command, 2))
                         {
                             Copy(command[1], command[2], true);
@@ -73,7 +74,6 @@ namespace FileManager
                         break;
                     case "mv":
                     case "move":
-                        userCommand = Commands.Move;
                         if (IsArgsCountEnough(command, 2))
                         {
                             Move(command[1], command[2], true);
@@ -81,7 +81,6 @@ namespace FileManager
                         break;
                     case "rm":
                     case "remove":
-                        userCommand = Commands.Delete;
                         if (IsArgsCountEnough(command, 1))
                         {
                             Delete(command[1], true);
@@ -89,19 +88,32 @@ namespace FileManager
                         break;
                     case "ex":
                     case "exit":
-                        userCommand = Commands.Exit;
+                        isCommandExit = true;
                         break;
                     case "re":
                     case "refresh":
-                        userCommand = Commands.Refresh;
+                        break;
+                    case ">":
+                        NextPage();
+                        break;
+                    case "<":
+                        PrevPage();
+                        break;
+                    case "help":
+                        ShowHelp();
+                        break;
+                    case "info":
+                        if (IsArgsCountEnough(command, 1))
+                        {
+                            ShowInfo(command[1]);
+                        }
                         break;
                     default:
-                        userCommand = Commands.Unknown;
-                        infoArea.DisplayLine("Неизвестная команда");
+                        infoArea.DisplayLine("Команда не распознана!");
                         break;
                 }
             }
-            return userCommand;
+            return isCommandExit;
         }
         /// <summary>
         /// This method check she new directory string and change current directory.
@@ -110,12 +122,20 @@ namespace FileManager
         static List<Entry> GetEntriesList(string dir)
         {
             List<Entry> entriesList = new List<Entry>();
-            string[] entries = Directory.GetFileSystemEntries(dir);
-            foreach (string entry in entries)
+            try
             {
-                entriesList.Add(new Entry(entry));
+                string[] entries = Directory.GetFileSystemEntries(dir);
+                foreach (string entry in entries)
+                {
+                    entriesList.Add(new Entry(entry));
+                }
+                entriesList.Sort();
             }
-            entriesList.Sort();
+            catch (Exception e)
+            {
+                LogException(e);
+            }
+            
             return entriesList;
         }
         static void ShowDirectory(List<Entry> entireList, int recursionCount)
@@ -138,18 +158,96 @@ namespace FileManager
                 }
             }
         }
-        static void ChangeCurrentDirectory(string newDirectory)
+        static void MakeDisplayList(List<Entry> entireList, int recursionCount)
+        {
+            string displayString;
+            int spaceCount = recursionLevel - recursionCount;
+            if (spaceCount == 0)
+            {
+                displayString = "[ .. ]";
+                displayList.Add(displayString);
+            }
+            foreach (Entry entry in entireList)
+            {
+                displayString = "";
+                displayString += " " + new string(' ', spaceCount * 2);
+                if (entry.Type == EntriesType.Directory)
+                {
+                    displayString += $"[ {entry.Name} ]";
+                    displayList.Add(displayString);
+                }
+                else
+                {
+                    displayString += $"{entry.Name}";
+                    displayList.Add(displayString);
+                }
+                if (entry.Type == EntriesType.Directory && recursionCount > 1)
+                {
+                    MakeDisplayList(GetEntriesList(entry.Path), recursionCount - 1);
+                }
+            }
+        }
+        static void MakePages()
+        {
+            int currentItem = 1;
+            int pagesCount = displayList.Count / rowsToDisplay;
+            if (displayList.Count % rowsToDisplay > 0)
+            {
+                pagesCount++;
+            }
+            int currentPage = 0;
+            displayPages = new List<string>[pagesCount];
+            for (int i = 0; i < pagesCount; i++)
+            {
+                displayPages[i] = new List<string>();
+            }
+            foreach (string displayString in displayList)
+            {
+                displayPages[currentPage].Add(displayString);
+                currentItem++;
+                if (currentItem > rowsToDisplay * (currentPage + 1))
+                {
+                    currentPage++;
+                }
+            }
+            currentDisplayPage = 0;
+        }
+        static void NextPage()
+        {
+            if (currentDisplayPage < displayPages.Length - 1)
+            {
+                currentDisplayPage++;
+            }
+        }
+        static void PrevPage()
+        {
+            if (currentDisplayPage > 0)
+            {
+                currentDisplayPage--;
+            }
+        }
+        static void ChangeCurrentDirectory(string newDirectory, bool userInteraction)
         {
             newDirectory = MakeAbsolutePath(newDirectory);
-            //Console.WriteLine();
+            newDirectory = GetBackDirectory(newDirectory);
             if (Directory.Exists(newDirectory))
             {
                 currentDirectory = newDirectory;
-                infoArea.DisplayLine($"Текущая директория применена: {newDirectory}");
+                displayList.Clear();
+                MakeDisplayList(GetEntriesList(newDirectory), recursionLevel);
+                MakePages();
+                if (userInteraction)
+                {
+                    infoArea.DisplayLine($"Текущая директория применена: {newDirectory}");
+                }
+                Config.Config.WriteLastDir(newDirectory);
             }
             else
             {
-                infoArea.DisplayLine("Нет такой директории");
+                if (userInteraction)
+                {
+                    infoArea.DisplayLine("Нет такой директории");
+                }
             }
         }
         static bool IsStringDir(string str)
@@ -170,6 +268,26 @@ namespace FileManager
             }
             return path;
         }
+        static string GetBackDirectory(string path)
+        {
+            Regex regex = new Regex(@"\\\.{2}$");
+            if (regex.IsMatch(path))
+            {
+                path = regex.Replace(path, "");
+                path = Path.GetDirectoryName(path);
+            }
+            return path;
+        }
+        static string TrimBackDirectory(string path)
+        {
+            Regex regex = new Regex(@"\\\.{2}$");
+            if (regex.IsMatch(path))
+            {
+                path = regex.Replace(path, "");
+                path = Path.GetDirectoryName(path);
+            }
+            return path;
+        }
         static string MakeAbsolutePath(string path)
         {
             if (!IsStringDir(path))
@@ -177,6 +295,9 @@ namespace FileManager
                 path = TrimStartingDirectorySeparator(path);
                 path = Path.Combine(currentDirectory, path);
             }
+            path = path.ToLower();
+            path =  Path.TrimEndingDirectorySeparator(path);
+            path = GetBackDirectory(path);
             return path;
         }
         /// <summary>
@@ -337,6 +458,7 @@ namespace FileManager
                                 {
                                     File.Move(source, target, true);
                                     infoArea.DisplayLine("Файл перемещен с заменой.");
+                                    ChangeCurrentDirectory(currentDirectory, false);
                                 }
                                 else
                                 {
@@ -346,6 +468,7 @@ namespace FileManager
                             else
                             {
                                 File.Move(source, target, true);
+                                ChangeCurrentDirectory(currentDirectory, false);
                             }
                         }
                         else
@@ -355,6 +478,7 @@ namespace FileManager
                             {
                                 infoArea.DisplayLine("Файл перемещен.");
                             }
+                            ChangeCurrentDirectory(currentDirectory, false);
                         }
                     }
                 }
@@ -383,6 +507,8 @@ namespace FileManager
                                 {
                                     Delete(target, false);
                                     MoveFolder(source, target);
+                                    infoArea.DisplayLine("Папка перемещена с заменой");
+                                    ChangeCurrentDirectory(currentDirectory, false);
                                 }
                                 else
                                 {
@@ -392,11 +518,17 @@ namespace FileManager
                             else
                             {
                                 MoveFolder(source, target);
+                                ChangeCurrentDirectory(currentDirectory, false);
                             }
                         }
                         else
                         {
                             MoveFolder(source, target);
+                            if (userInteraction)
+                            {
+                                infoArea.DisplayLine("Папка перемещена");
+                            }
+                            ChangeCurrentDirectory(currentDirectory, false);
                         }
                     }
                 }
@@ -436,7 +568,12 @@ namespace FileManager
                     if (AskUser("Вы уверены, что хотите удалить файл?"))
                     {
                         File.Delete(path);
+                        if (userInteraction)
+                        {
+                            infoArea.DisplayLine("Файл удален");
+                        }
                     }
+                    ChangeCurrentDirectory(currentDirectory, false);
                 }
                 else
                 {
@@ -445,6 +582,7 @@ namespace FileManager
                     {
                         infoArea.DisplayLine("Файл удален");
                     }
+                    ChangeCurrentDirectory(currentDirectory, false);
                 }
             }
             // Если это папка
@@ -459,6 +597,7 @@ namespace FileManager
                         {
                             infoArea.DisplayLine("Папка удалена");
                         }
+                        ChangeCurrentDirectory(currentDirectory, false);
                     }
                 }
                 else
@@ -468,11 +607,12 @@ namespace FileManager
                     {
                         infoArea.DisplayLine("Папка удалена");
                     }
+                    ChangeCurrentDirectory(currentDirectory, false);
                 }
             }
             else
             {
-                infoArea.DisplayLine("Bad target");
+                infoArea.DisplayLine("Неверно задано имя объекта для удаления!");
             }
         }
         static void DeleteFolder(string path)
@@ -484,39 +624,116 @@ namespace FileManager
             }
             Directory.Delete(path);
         }
-        static void Main(string[] args)
+        static void ShowInfo(string path)
+        {
+            path = MakeAbsolutePath(path);
+            // Если это папка
+            if (Directory.Exists(path))
+            {
+                DateTime creationTime = Directory.GetCreationTime(path);
+                int dirCount = Directory.GetDirectories(path).Length;
+                int fileCount = Directory.GetFiles(path).Length;
+                infoArea.DisplayLine($"Дата создания: {creationTime}",
+                    $"Папок: {dirCount}",
+                    $"Файлов: {fileCount}");
+            }
+            // Если это файл
+            else if (File.Exists(path))
+            {
+                DateTime creationTime = File.GetCreationTime(path);
+                DateTime changingTime = File.GetLastWriteTime(path);
+                FileInfo fileinfo = new FileInfo(path);
+                infoArea.DisplayLine($"Дата создания: {creationTime}",
+                    $"Дата изменения: {changingTime}",
+                    $"Размер: {fileinfo.Length} Байт");
+            }
+            else
+            {
+                infoArea.DisplayLine("Указанный объект не существует!");
+            }
+        }
+        static void ShowHelp()
+        {
+            infoArea.Clear();
+            infoArea.DisplayLine("cd [target] - задать задать директорию;", 
+                "copy | cp [source] [target] - копировать объект;", 
+                "move | mv [source] [target] - переместить объект;", 
+                "remove | rm [target] - удалить объект;",
+                "info [target] - показать атрибуты объекта;",
+                "< | > - для выбора страниц отображения;",
+                "exit - завершение работы.");
+        }
+        static void LogException(Exception exception)
+        {
+            string path = Path.Combine(Directory.GetCurrentDirectory(), "error.txt");
+            //if (!File.Exists(path))
+            //{
+            //    File.Create(path);
+            //}
+            File.AppendAllText(path, $"{DateTime.Now.ToString()}: {exception.Message}\n");
+        }
+        static void Main()
         {
             // Чтение настроек
-            //rowsToDisplay = Convert.ToInt32(ConfigurationManager.AppSettings.Get("rowsDisplay"));
-            //recursionLevel = Convert.ToInt32(ConfigurationManager.AppSettings.Get("recursionLevel"));
-
+            bool isNeedToExit = false;
+            Config.Config.ReadConfig();
+            rowsToDisplay = Config.Config.RowsToDisplay;
+            recursionLevel = Config.Config.RecursionLevel;
+            
             // UI
-            treeArea = new Square(0, 0, 120, rowsToDisplay + 2);
+            treeArea = new Square(0, 0, Console.BufferWidth - 1, rowsToDisplay + 2);
             treeArea.bottomLeftCornerSymbol = '╠';
             treeArea.bottomRightCornerSymbol = '╣';
             treeArea.MakeAllBorders();
             treeArea.Draw();
-            infoArea = new Square(0, treeArea.posBorderBottom, 120, 7);
+            infoArea = new Square(0, treeArea.posBorderBottom, Console.BufferWidth - 1, 9);
             infoArea.topLeftCornerSymbol = '╠';
             infoArea.topRightCornerSymbol = '╣';
             infoArea.bottomLeftCornerSymbol = '╠';
             infoArea.bottomRightCornerSymbol = '╣';
             infoArea.MakeAllBorders();
             infoArea.Draw();
-            consoleArea = new Square(0, infoArea.posBorderBottom, 120, 3);
+            consoleArea = new Square(0, infoArea.posBorderBottom, Console.BufferWidth - 1, 3);
             consoleArea.topLeftCornerSymbol = '╠';
             consoleArea.topRightCornerSymbol = '╣';
             consoleArea.MakeAllBorders();
             consoleArea.Draw();
             Console.WriteLine();
 
-            ChangeCurrentDirectory("D:\\TEMP");
-            Commands userCommand;
+            // Применение последней директории
+            try
+            {
+                ChangeCurrentDirectory(Config.Config.LastDir, false);
+            }
+            catch (Exception e)
+            {
+                LogException(e);
+                ChangeCurrentDirectory(defaultDir, false);
+            }
+            infoArea.DisplayLine("Введите \"help\" для отображения списка команд.");
+            
+            // Бесконечный цикл
             do
             {
-                //ShowDirectory(GetEntriesList(currentDirectory), recursionLevel);
-                userCommand = ParseCommand(consoleArea.Input($"{currentDirectory}>"));
-            } while (userCommand != Commands.Exit);
+                try
+                {
+                    treeArea.DisplayList(displayPages[currentDisplayPage]);
+                }
+                catch (Exception e)
+                {
+                    LogException(e);
+                    ChangeCurrentDirectory(defaultDir, false);
+                    treeArea.DisplayList(displayPages[currentDisplayPage]);
+                }
+                try
+                {
+                    isNeedToExit = ParseCommand(consoleArea.Input($"{currentDirectory}>"));
+                }
+                catch (Exception e)
+                {
+                    LogException(e);
+                }
+            } while (isNeedToExit != true);
         }
     }
 }
